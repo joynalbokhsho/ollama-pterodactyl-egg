@@ -2,6 +2,7 @@
 
 ![Ollama Pterodactyl](https://img.shields.io/badge/Ollama-Pterodactyl-blue?style=for-the-badge&logo=ollama)
 ![Pterodactyl AI Egg](https://img.shields.io/badge/Pterodactyl-Egg-green?style=for-the-badge)
+![Visitors](https://api.visitorbadge.io/api/visitors?path=joynalbokhsho.pterodactyl-ollama-egg&countColor=%23263759&style=for-the-badge)
 
 A production-ready **Pterodactyl egg for Ollama** that allows you to easily run a local **LLM server** directly on your Pterodactyl Panel. If you are searching for an **Ollama Pterodactyl Egg** to host open-source AI models seamlessly, this is the complete, lightweight, and API-ready solution. 
 

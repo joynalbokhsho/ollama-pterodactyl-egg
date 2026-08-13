@@ -5,7 +5,7 @@
         "update_url": null
     },
     "exported_at": "2026-08-13T00:00:00+00:00",
-    "name": "Ollama LLM Server",
+    "name": "Ollama",
     "author": "joynalbokhsho@gmail.com",
     "description": "Run Ollama with local LLM support (Qwen, LLaMA, Gemma, etc). Auto-installs Ollama, starts the API server, and pulls the configured model on boot.",
     "features": null,
@@ -23,7 +23,7 @@
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\n\napt-get update -y\napt-get install -y curl ca-certificates tar zstd\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nARCH=$(uname -m)\ncase \"$ARCH\" in\n    x86_64|amd64) OLLAMA_ARCH=\"amd64\" ;;\n    aarch64|arm64) OLLAMA_ARCH=\"arm64\" ;;\n    *) echo \"Unsupported architecture: $ARCH\"; exit 1 ;;\nesac\n\necho \"=== Disk space available before download ===\"\ndf -h /mnt/server\n\necho \"Downloading Ollama (${OLLAMA_ARCH})...\"\nDOWNLOAD_OK=0\nif curl -fSL --progress-bar -o /mnt/server/ollama.tar.zst \"https://ollama.com/download/ollama-linux-${OLLAMA_ARCH}.tar.zst\"; then\n    DOWNLOAD_OK=1\nelse\n    echo \"Primary source failed, trying GitHub releases mirror...\"\n    if curl -fSL --progress-bar -o /mnt/server/ollama.tar.zst \"https://github.com/ollama/ollama/releases/latest/download/ollama-linux-${OLLAMA_ARCH}.tar.zst\"; then\n        DOWNLOAD_OK=1\n    fi\nfi\n\nif [ \"$DOWNLOAD_OK\" -ne 1 ] || [ ! -s /mnt/server/ollama.tar.zst ]; then\n    echo \"ERROR: Download failed or file is empty.\"\n    echo \"=== Disk space at time of failure ===\"\n    df -h /mnt/server\n    exit 1\nfi\n\necho \"Downloaded file size: $(du -h /mnt/server/ollama.tar.zst | cut -f1)\"\n\necho \"Extracting...\"\nmkdir -p /mnt/server/ollama\nif ! zstd -d -c /mnt/server/ollama.tar.zst | tar -xf - -C /mnt/server/ollama; then\n    echo \"ERROR: Extraction failed. The archive is likely incomplete/corrupted.\"\n    echo \"This is almost always caused by running out of disk space on this server.\"\n    echo \"=== Disk space at time of failure ===\"\n    df -h /mnt/server\n    exit 1\nfi\nrm -f /mnt/server/ollama.tar.zst\n\nMISSING=0\nif [ ! -f /mnt/server/ollama/bin/ollama ]; then\n    echo \"ERROR: Missing bin/ollama\"\n    MISSING=1\nfi\nif [ ! -d /mnt/server/ollama/lib/ollama ] || [ -z \"$(ls -A /mnt/server/ollama/lib/ollama 2>/dev/null)\" ]; then\n    echo \"ERROR: Missing or empty lib/ollama directory (this holds the inference engine)\"\n    MISSING=1\nfi\nif [ \"$MISSING\" -eq 1 ]; then\n    echo \"ERROR: Ollama installation is incomplete. Aborting.\"\n    echo \"=== Disk space at time of failure ===\"\n    df -h /mnt/server\n    exit 1\nfi\n\nchmod +x /mnt/server/ollama/bin/ollama\necho \"Ollama installed successfully. Total size: $(du -sh /mnt/server/ollama | cut -f1)\"\n\ncat <<'EOF' > /mnt/server/start.sh\n#!/bin/bash\nexport PATH=\"/home/container/ollama/bin:$PATH\"\nexport LD_LIBRARY_PATH=\"/home/container/ollama/lib:/home/container/ollama/lib/ollama:$LD_LIBRARY_PATH\"\nexport OLLAMA_HOST=0.0.0.0:${SERVER_PORT}\nexport OLLAMA_MODELS=/home/container/models\n\nmkdir -p \"$OLLAMA_MODELS\"\n\necho \"Starting Ollama server on port ${SERVER_PORT}...\"\n/home/container/ollama/bin/ollama serve &\nSERVE_PID=$!\n\nuntil curl -s http://127.0.0.1:${SERVER_PORT}/api/tags > /dev/null 2>&1; do\n    sleep 1\ndone\n\necho \"Pulling model: ${MODEL_NAME}\"\n/home/container/ollama/bin/ollama pull \"${MODEL_NAME}\" || echo \"Model pull failed, server will still run\"\n\necho \"Listening on ${SERVER_PORT}\"\nwait $SERVE_PID\nEOF\n\nchmod +x /mnt/server/start.sh\necho \"Installation complete.\"\n",
+            "script": "#!/bin/bash\n\napt-get update -y\napt-get install -y curl ca-certificates tar zstd\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nARCH=$(uname -m)\ncase \"$ARCH\" in\n    x86_64|amd64) OLLAMA_ARCH=\"amd64\" ;;\n    aarch64|arm64) OLLAMA_ARCH=\"arm64\" ;;\n    *) echo \"Unsupported architecture: $ARCH\"; exit 1 ;;\nesac\n\necho \"=== Disk space available before download ===\"\ndf -h /mnt/server\n\necho \"Downloading Ollama (${OLLAMA_ARCH})...\"\nDOWNLOAD_OK=0\nif curl -fSL --progress-bar -o /mnt/server/ollama.tar.zst \"https://ollama.com/download/ollama-linux-${OLLAMA_ARCH}.tar.zst\"; then\n    DOWNLOAD_OK=1\nelse\n    echo \"Primary source failed, trying GitHub releases mirror...\"\n    if curl -fSL --progress-bar -o /mnt/server/ollama.tar.zst \"https://github.com/ollama/ollama/releases/latest/download/ollama-linux-${OLLAMA_ARCH}.tar.zst\"; then\n        DOWNLOAD_OK=1\n    fi\nfi\n\nif [ \"$DOWNLOAD_OK\" -ne 1 ] || [ ! -s /mnt/server/ollama.tar.zst ]; then\n    echo \"ERROR: Download failed or file is empty.\"\n    echo \"=== Disk space at time of failure ===\"\n    df -h /mnt/server\n    exit 1\nfi\n\necho \"Downloaded file size: $(du -h /mnt/server/ollama.tar.zst | cut -f1)\"\n\necho \"Extracting...\"\nmkdir -p /mnt/server/ollama\nif ! zstd -d -c /mnt/server/ollama.tar.zst | tar -xf - -C /mnt/server/ollama; then\n    echo \"ERROR: Extraction failed. The archive is likely incomplete/corrupted.\"\n    echo \"This is almost always caused by running out of disk space on this server.\"\n    echo \"=== Disk space at time of failure ===\"\n    df -h /mnt/server\n    exit 1\nfi\nrm -f /mnt/server/ollama.tar.zst\n\nMISSING=0\nif [ ! -f /mnt/server/ollama/bin/ollama ]; then\n    echo \"ERROR: Missing bin/ollama\"\n    MISSING=1\nfi\nif [ ! -d /mnt/server/ollama/lib/ollama ] || [ -z \"$(ls -A /mnt/server/ollama/lib/ollama 2>/dev/null)\" ]; then\n    echo \"ERROR: Missing or empty lib/ollama directory (this holds the inference engine)\"\n    MISSING=1\nfi\nif [ \"$MISSING\" -eq 1 ]; then\n    echo \"ERROR: Ollama installation is incomplete. Aborting.\"\n    echo \"=== Disk space at time of failure ===\"\n    df -h /mnt/server\n    exit 1\nfi\n\nchmod +x /mnt/server/ollama/bin/ollama\necho \"Ollama installed successfully. Total size: $(du -sh /mnt/server/ollama | cut -f1)\"\n\ncat <<'EOF' > /mnt/server/start.sh\n#!/bin/bash\nexport PATH=\"/home/container/ollama/bin:$PATH\"\nexport LD_LIBRARY_PATH=\"/home/container/ollama/lib:/home/container/ollama/lib/ollama:$LD_LIBRARY_PATH\"\nexport OLLAMA_HOST=0.0.0.0:${SERVER_PORT}\nexport OLLAMA_MODELS=/home/container/models\n\n# Context window size (tokens). Model default is used if left blank.\nif [ -n \"${CONTEXT_LENGTH}\" ]; then\n    export OLLAMA_CONTEXT_LENGTH=\"${CONTEXT_LENGTH}\"\nfi\n\n# How long an idle model stays loaded in memory before unloading (e.g. 5m, 30m, -1 for forever, 0 to unload immediately after each request)\nif [ -n \"${KEEP_ALIVE}\" ]; then\n    export OLLAMA_KEEP_ALIVE=\"${KEEP_ALIVE}\"\nfi\n\n# Max number of concurrent requests handled per model\nif [ -n \"${NUM_PARALLEL}\" ]; then\n    export OLLAMA_NUM_PARALLEL=\"${NUM_PARALLEL}\"\nfi\n\n# Max number of models kept loaded in memory simultaneously\nif [ -n \"${MAX_LOADED_MODELS}\" ]; then\n    export OLLAMA_MAX_LOADED_MODELS=\"${MAX_LOADED_MODELS}\"\nfi\n\n# KV cache quantization: f16 (default, most accurate), q8_0, or q4_0 (less RAM, slight quality loss)\nif [ -n \"${KV_CACHE_TYPE}\" ]; then\n    export OLLAMA_KV_CACHE_TYPE=\"${KV_CACHE_TYPE}\"\nfi\n\nmkdir -p \"$OLLAMA_MODELS\"\n\necho \"=== Ollama server config ===\"\necho \"Context length: ${OLLAMA_CONTEXT_LENGTH:-model default}\"\necho \"Keep alive: ${OLLAMA_KEEP_ALIVE:-5m (default)}\"\necho \"Num parallel: ${OLLAMA_NUM_PARALLEL:-1 (default)}\"\necho \"Max loaded models: ${OLLAMA_MAX_LOADED_MODELS:-1 (default)}\"\necho \"KV cache type: ${OLLAMA_KV_CACHE_TYPE:-f16 (default)}\"\necho \"============================\"\n\necho \"Starting Ollama server on port ${SERVER_PORT}...\"\n/home/container/ollama/bin/ollama serve &\nSERVE_PID=$!\n\nuntil curl -s http://127.0.0.1:${SERVER_PORT}/api/tags > /dev/null 2>&1; do\n    sleep 1\ndone\n\necho \"Pulling model: ${MODEL_NAME}\"\n/home/container/ollama/bin/ollama pull \"${MODEL_NAME}\" || echo \"Model pull failed, server will still run\"\n\necho \"Listening on ${SERVER_PORT}\"\nwait $SERVE_PID\n\nEOF\n\nchmod +x /mnt/server/start.sh\necho \"Installation complete.\"\n",
             "container": "debian:bookworm-slim",
             "entrypoint": "bash"
         }
@@ -37,6 +37,56 @@
             "user_viewable": true,
             "user_editable": true,
             "rules": "required|string|max:100",
+            "field_type": "text"
+        },
+        {
+            "name": "Context Length",
+            "description": "Max context window in tokens (prompt + response combined). Leave blank for model default (usually 4096-8192). Larger values need more RAM. Try 16384 or 32768 for long code generation.",
+            "env_variable": "CONTEXT_LENGTH",
+            "default_value": "16384",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|min:512|max:131072",
+            "field_type": "text"
+        },
+        {
+            "name": "Keep Alive",
+            "description": "How long the model stays loaded in memory after the last request before unloading (e.g. 5m, 30m, 1h). Use -1 to never unload, 0 to unload immediately after each request. Leave blank for Ollama's default (5m).",
+            "env_variable": "KEEP_ALIVE",
+            "default_value": "30m",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|max:20",
+            "field_type": "text"
+        },
+        {
+            "name": "Num Parallel",
+            "description": "Max number of requests processed concurrently per model. Higher values need proportionally more RAM for context. Leave blank for Ollama's default (usually 1).",
+            "env_variable": "NUM_PARALLEL",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|min:1|max:16",
+            "field_type": "text"
+        },
+        {
+            "name": "Max Loaded Models",
+            "description": "Max number of different models Ollama keeps in memory at once. Leave blank for Ollama's default (usually 1). Only raise this if you plan to switch between multiple models without unloading.",
+            "env_variable": "MAX_LOADED_MODELS",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|integer|min:1|max:8",
+            "field_type": "text"
+        },
+        {
+            "name": "KV Cache Type",
+            "description": "Quantization for the KV cache. f16 = default, most accurate. q8_0 = ~half the RAM, tiny quality loss. q4_0 = least RAM, more noticeable quality loss. Leave blank for f16.",
+            "env_variable": "KV_CACHE_TYPE",
+            "default_value": "",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|string|in:f16,q8_0,q4_0",
             "field_type": "text"
         }
     ]

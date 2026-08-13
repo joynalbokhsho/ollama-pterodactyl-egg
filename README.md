@@ -33,7 +33,12 @@ When creating your Ollama server or under the **Startup** tab, you can configure
 
 | Variable | Environment Variable | Description | Default |
 | :--- | :--- | :--- | :--- |
-| **Model Name** | `MODEL_NAME` | The Ollama model to automatically pull and run on startup. Check the [Ollama Library](https://ollama.com/library) for available models (e.g., `llama3.1:8b`, `qwen2.5:3b`, `gemma2:9b`). | `qwen2.5:3b` |
+| **Model Name** | `MODEL_NAME` | The Ollama model to automatically pull and run on startup. Check the [Ollama Library](https://ollama.com/library) for available models. | `qwen2.5:3b` |
+| **Context Length** | `CONTEXT_LENGTH` | Max context window in tokens. Larger values need more RAM. Try `16384` or `32768` for long code generation. Leave blank for model default. | `16384` |
+| **Keep Alive** | `KEEP_ALIVE` | How long the model stays loaded in RAM after a request (e.g. `5m`, `30m`, `1h`). Use `-1` to never unload, `0` to unload immediately. | `30m` |
+| **Num Parallel** | `NUM_PARALLEL` | Max number of requests processed concurrently per model. Higher values need proportionally more RAM. | *Blank* |
+| **Max Loaded Models** | `MAX_LOADED_MODELS` | Max number of different models Ollama keeps in memory at once. | *Blank* |
+| **KV Cache Type** | `KV_CACHE_TYPE` | Quantization for the KV cache (`f16`, `q8_0`, `q4_0`). Lowers RAM usage at a slight quality cost. Leave blank for `f16` (most accurate). | *Blank* |
 
 ## 💻 Usage & API Access
 

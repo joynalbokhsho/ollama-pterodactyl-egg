@@ -1,4 +1,4 @@
-# Pterodactyl Ollama Egg - Run Local LLMs on Your Panel
+# Pterodactyl Ollama Egg - Run Local LLMs on Your Pterodactyl Panel
 
 ![Ollama Pterodactyl](https://img.shields.io/badge/Ollama-Pterodactyl-blue?style=for-the-badge&logo=ollama)
 ![Pterodactyl AI Egg](https://img.shields.io/badge/Pterodactyl-Egg-green?style=for-the-badge)

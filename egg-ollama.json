@@ -1,0 +1,43 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED AUTOMATICALLY BY PTERODACTYL PANEL - IMPORT VIA ADMIN > NESTS",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-08-13T00:00:00+00:00",
+    "name": "Ollama LLM Server",
+    "author": "joynalbokhsho@gmail.com",
+    "description": "Run Ollama with local LLM support (Qwen, LLaMA, Gemma, etc). Auto-installs Ollama, starts the API server, and pulls the configured model on boot.",
+    "features": null,
+    "docker_images": {
+        "Debian": "ghcr.io/parkervcp/yolks:debian",
+        "Ubuntu": "ghcr.io/parkervcp/yolks:ubuntu"
+    },
+    "file_denylist": [],
+    "startup": "bash start.sh",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"Listening on\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\n\napt-get update -y\napt-get install -y curl ca-certificates tar zstd\n\nmkdir -p /mnt/server\ncd /mnt/server\n\nARCH=$(uname -m)\ncase \"$ARCH\" in\n    x86_64|amd64) OLLAMA_ARCH=\"amd64\" ;;\n    aarch64|arm64) OLLAMA_ARCH=\"arm64\" ;;\n    *) echo \"Unsupported architecture: $ARCH\"; exit 1 ;;\nesac\n\necho \"=== Disk space available before download ===\"\ndf -h /mnt/server\n\necho \"Downloading Ollama (${OLLAMA_ARCH})...\"\nDOWNLOAD_OK=0\nif curl -fSL --progress-bar -o /mnt/server/ollama.tar.zst \"https://ollama.com/download/ollama-linux-${OLLAMA_ARCH}.tar.zst\"; then\n    DOWNLOAD_OK=1\nelse\n    echo \"Primary source failed, trying GitHub releases mirror...\"\n    if curl -fSL --progress-bar -o /mnt/server/ollama.tar.zst \"https://github.com/ollama/ollama/releases/latest/download/ollama-linux-${OLLAMA_ARCH}.tar.zst\"; then\n        DOWNLOAD_OK=1\n    fi\nfi\n\nif [ \"$DOWNLOAD_OK\" -ne 1 ] || [ ! -s /mnt/server/ollama.tar.zst ]; then\n    echo \"ERROR: Download failed or file is empty.\"\n    echo \"=== Disk space at time of failure ===\"\n    df -h /mnt/server\n    exit 1\nfi\n\necho \"Downloaded file size: $(du -h /mnt/server/ollama.tar.zst | cut -f1)\"\n\necho \"Extracting...\"\nmkdir -p /mnt/server/ollama\nif ! zstd -d -c /mnt/server/ollama.tar.zst | tar -xf - -C /mnt/server/ollama; then\n    echo \"ERROR: Extraction failed. The archive is likely incomplete/corrupted.\"\n    echo \"This is almost always caused by running out of disk space on this server.\"\n    echo \"=== Disk space at time of failure ===\"\n    df -h /mnt/server\n    exit 1\nfi\nrm -f /mnt/server/ollama.tar.zst\n\nMISSING=0\nif [ ! -f /mnt/server/ollama/bin/ollama ]; then\n    echo \"ERROR: Missing bin/ollama\"\n    MISSING=1\nfi\nif [ ! -d /mnt/server/ollama/lib/ollama ] || [ -z \"$(ls -A /mnt/server/ollama/lib/ollama 2>/dev/null)\" ]; then\n    echo \"ERROR: Missing or empty lib/ollama directory (this holds the inference engine)\"\n    MISSING=1\nfi\nif [ \"$MISSING\" -eq 1 ]; then\n    echo \"ERROR: Ollama installation is incomplete. Aborting.\"\n    echo \"=== Disk space at time of failure ===\"\n    df -h /mnt/server\n    exit 1\nfi\n\nchmod +x /mnt/server/ollama/bin/ollama\necho \"Ollama installed successfully. Total size: $(du -sh /mnt/server/ollama | cut -f1)\"\n\ncat <<'EOF' > /mnt/server/start.sh\n#!/bin/bash\nexport PATH=\"/home/container/ollama/bin:$PATH\"\nexport LD_LIBRARY_PATH=\"/home/container/ollama/lib:/home/container/ollama/lib/ollama:$LD_LIBRARY_PATH\"\nexport OLLAMA_HOST=0.0.0.0:${SERVER_PORT}\nexport OLLAMA_MODELS=/home/container/models\n\nmkdir -p \"$OLLAMA_MODELS\"\n\necho \"Starting Ollama server on port ${SERVER_PORT}...\"\n/home/container/ollama/bin/ollama serve &\nSERVE_PID=$!\n\nuntil curl -s http://127.0.0.1:${SERVER_PORT}/api/tags > /dev/null 2>&1; do\n    sleep 1\ndone\n\necho \"Pulling model: ${MODEL_NAME}\"\n/home/container/ollama/bin/ollama pull \"${MODEL_NAME}\" || echo \"Model pull failed, server will still run\"\n\necho \"Listening on ${SERVER_PORT}\"\nwait $SERVE_PID\nEOF\n\nchmod +x /mnt/server/start.sh\necho \"Installation complete.\"\n",
+            "container": "debian:bookworm-slim",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "Model Name",
+            "description": "The Ollama model to automatically pull and run on startup (e.g. qwen2.5:3b, llama3.1:8b, gemma2:9b).",
+            "env_variable": "MODEL_NAME",
+            "default_value": "qwen2.5:3b",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string|max:100",
+            "field_type": "text"
+        }
+    ]
+}
